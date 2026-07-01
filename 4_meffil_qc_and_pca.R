@@ -21,18 +21,21 @@ options(mc.cores=15)
 # ---- Input ----
 parser <- ArgumentParser()
 
+# DNAm batch, e.g. 450k, EPICv1, EPICv2
 parser$add_argument(
   "-b",
   "--batch",
   type = "character"
 )
 
+# path to IDAT files of data batch
 parser$add_argument(
   "-i",
   "--idats",
   type = "character"
 )
 
+# path to output files, i.e. QC report
 parser$add_argument(
   "-o",
   "--output",
@@ -44,7 +47,6 @@ args <- parser$parse_args()
 batch <- args$batch
 idats <- args$idats
 output <- args$output 
-
 
 # generate meffil sample sheet
 paste("Processing", batch, "samples in directory:", idats)
@@ -80,9 +82,9 @@ writeLines(qc.summary$bad.cpgs$name, paste0(output, "reports/", batch, "_outlier
 paste(length(qc.summary$bad.samples), "outlier samples identified")
 writeLines(qc.summary$bad.samples$sample.name, paste0(output, "reports/", batch, "_outlier_samples.txt"))
 
-# Remove outlier samples if necessary
-# qc.objects <- meffil.remove.samples(qc.objects, qc.summary$bad.samples$sample.name)
-# I am basing this on post-QC data, therefore outlier samples are already removed
+# Remove outlier samples
+qc.objects <- meffil.remove.samples(qc.objects, qc.summary$bad.samples$sample.name)
+
 
 # ---- PCA ----
 # Plot residuals remaining after fitting control matrix to decide on the number PCs
