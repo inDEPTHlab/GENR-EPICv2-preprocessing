@@ -3,8 +3,8 @@
 ###################################
 ## Script: DNAm QC and PCA
 ## 
-## Purpose: Prepare data for functional normalisation:
-##          Identify probes to exclude and number of principal components to normalise on.
+## Purpose: Prepare data for functional normalization:
+##          Identify probes to exclude and number of principal components to normalize on.
 ##
 ## Author Name: Anna Grossbach
 ##
@@ -95,4 +95,4 @@ pdf(paste0(output, "reports/", batch, "_pc_plot.pdf"))
 print(meffil.plot.pc.fit(qc.objects)$plot)
 dev.off()
 
-paste("Check plot to decide how many PCs to include in normalisation")
+paste("Check plot to decide how many PCs to include in normalization")
