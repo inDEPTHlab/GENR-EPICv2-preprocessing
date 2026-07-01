@@ -21,10 +21,11 @@ library(tidyverse)
 options(mc.cores=15)
 
 
-# ---- Functions ----
-# Package each cell type proportion calculation in a function
-# an generate a plot that can be used as quality/sanity check later  
+input = "/PATH/TO/INPUT/FOLDER/"
+output = "/PATH/TO/OUTPUT/FOLDER/"
 
+
+# ---- Functions ----
 ## ---- UniLIFE ----
 unilife <- function(data, type){
 
@@ -33,7 +34,7 @@ unilife <- function(data, type){
   out$SampleID <- rownames(out)
   
   saveRDS(out,
-          file = paste0("/home/a.grossbach/data/genr_dnam/release4_final/", Age , "/", Array, "/CellTypes/Child_", Array, "DNAmRelease4", type, "ALLUniLIFE_", Age, "_20260423.rds"))
+          file = paste0(output, Age , "/", Array, "/CellTypes/Child_", Array, "DNAmRelease4", type, "ALLUniLIFE_", Age, "_20260423.rds"))
   
   p <- out |> 
     pivot_longer(cols = !SampleID,
@@ -46,7 +47,7 @@ unilife <- function(data, type){
     theme(axis.text.x = element_text(angle = 90))
   
   ggsave(p, 
-         file = paste0("/home/a.grossbach/data/genr_dnam/release4_final/", Age , "/", Array, "/CellTypes/Child_", Array, "DNAmRelease4", type, "ALLUniLIFE_", Age, "_20260423.png"))
+         file = paste0(output, Age , "/", Array, "/CellTypes/Child_", Array, "DNAmRelease4", type, "ALLUniLIFE_", Age, "_20260423.png"))
 
 }
 
@@ -58,7 +59,7 @@ epidish <- function(data, type){
   out$SampleID <- rownames(out)
   
   saveRDS(out,
-          file = paste0("/home/a.grossbach/data/genr_dnam/release4_final/", Age , "/", Array, "/CellTypes/Child_", Array, "DNAmRelease4", type, "ALLEpiDISH_", Age, "_20260423.rds"))
+          file = paste0(output, Age , "/", Array, "/CellTypes/Child_", Array, "DNAmRelease4", type, "ALLEpiDISH_", Age, "_20260423.rds"))
   
   p <- out |> 
     pivot_longer(cols = !SampleID,
@@ -71,7 +72,7 @@ epidish <- function(data, type){
     theme(axis.text.x = element_text(angle = 90))
   
   ggsave(p, 
-         file = paste0("/home/a.grossbach/data/genr_dnam/release4_final/", Age , "/", Array, "/CellTypes/Child_", Array, "DNAmRelease4", type, "ALLEpiDISH_", Age, "_20260423.png"))
+         file = paste0(output, Age , "/", Array, "/CellTypes/Child_", Array, "DNAmRelease4", type, "ALLEpiDISH_", Age, "_20260423.png"))
   
 }
 
@@ -112,7 +113,7 @@ meffil_cells <- function(idats){
     out <- data.frame(SampleID=row.names(out), out)
     
     saveRDS(out,
-            file = paste0("/home/a.grossbach/data/genr_dnam/release4_final/", Age , "/", Array, "/CellTypes/Child_", Array, "DNAmRelease4Idats", ct_label, "_", Age, "_20260406.rds"))
+            file = paste0(output, Age , "/", Array, "/CellTypes/Child_", Array, "DNAmRelease4Idats", ct_label, "_", Age, "_20260406.rds"))
     
     p <- out |> 
       pivot_longer(cols = !SampleID,
@@ -125,7 +126,7 @@ meffil_cells <- function(idats){
       theme(axis.text.x = element_text(angle = 90))
     
     ggsave(p, 
-           file = paste0("/home/a.grossbach/data/genr_dnam/release4_final/", Age , "/", Array, "/CellTypes/Child_", Array, "DNAmRelease4Idats", ct_label, "_", Age, "_20260406.png"))
+           file = paste0(output, Age , "/", Array, "/CellTypes/Child_", Array, "DNAmRelease4Idats", ct_label, "_", Age, "_20260406.png"))
     
     
   }
@@ -133,40 +134,19 @@ meffil_cells <- function(idats){
 
 
 # ---- Cell Type Proportion Calculations ----
-for(batch in c("genr_450k_age0", "genr_450k_age5", "genr_450k_age9", "genr_epicv1_age0", "genrnext_epicv1_age0")){
+# process each data batch and timepoint separately                    
+for(batch in c("450k_age0", "450k_age5", "450k_age9", "epicv1_age0", "epicv2_age0", "epicv2_age5", "epicv2_age9", "epicv2_age13", "epicv2_age17")){
   
   print(paste("Calculating cell type proportions for batch", batch))
   
-  if(str_detect(batch, "age0")){
-    Age = "Birth"
-  } else if(str_detect(batch, "age5")){
-    Age = "5y"
-  } else if(str_detect(batch, "age9")){
-    Age = "9y"
-  }
+  Age = str_split(batch, "_", simplify=T)[2]
+  Array = str_split(batch, "_", simplify=T)[1]  
+  idats <- paste0(input, "idats_", Array, "_", Age, "/")
   
-  if(str_detect(batch, "450k")){
-    Array = "450k"
-  } else if(str_detect(batch, "genr_epicv1")){
-    Array = "EPICv1"
-  } else if(str_detect(batch, "genrnext_epicv1")){
-    Array = "GENRNXT_EPICv1"
-  } 
-  
-  
-  dnam_functional <- readRDS(paste0("/home/a.grossbach/data/genr_dnam/release4_final/", Age , "/", Array, "/Functional/Child_", Array, "DNAmRelease4BetasFunctionalALL_", Age, "_20260423.rds"))
-  dnam_quantile <- readRDS(paste0("/home/a.grossbach/data/genr_dnam/release4_final/", Age , "/", Array, "/Quantile/Child_", Array, "DNAmRelease4BetasQuantileALL_", Age, "_20260406.rds"))
-  
-  if(str_detect(batch, "epic")){
-    if(batch == "genr_epicv1_age0"){folder = "genr_epicv1"}
-    if(batch == "genrnext_epicv1_age0"){folder = "genrnext_epicv1"}
-    idats <- paste0("/home/a.grossbach/data/genr_dnam/", folder, "/idats_selected/")
-  } else if(str_detect(batch, "450k")){
-    timepoint <- strsplit(batch, "_")[[1]][3]
-    idats <- paste0("/home/a.grossbach/data/genr_dnam/genr_450k/idats_selected_", timepoint, "/")
-  }
+  dnam_functional <- readRDS(paste0(input, Age , "/", Array, "/Functional/Child_", Array, "DNAmRelease4BetasFunctionalALL_", Age, "_20260423.rds"))
+  dnam_quantile <- readRDS(paste0(input, Age , "/", Array, "/Quantile/Child_", Array, "DNAmRelease4BetasQuantileALL_", Age, "_20260406.rds"))
 
-  if(str_detect(batch, "age0")){
+  if(Age == "age0"){
     
     print(paste("UniLife"))
     unilife(data = dnam_functional, type = "Functional")
