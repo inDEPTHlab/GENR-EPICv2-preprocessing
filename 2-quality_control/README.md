@@ -1,8 +1,8 @@
 # Longitudinal DNAm Quality Control
 
-This section contains scripts for longitudinal DNAm data.  
+This section contains scripts for longitudinal DNAm data quality control.  
 
-It is important to note that these are steps to consider in addition to basic quality control as recommended for data from your specific array type.  
+These steps are intended to complement the basic quality control procedures recommended for your specific DNAm array and should be considered in addition to standard preprocessing workflows.  
 
 ---
 
@@ -10,6 +10,6 @@ It is important to note that these are steps to consider in addition to basic qu
 
 | File | Description |
 |------|-------------|
-| `2.1-qc_and_normalization_preparation.R` | Basic quality control and functional normalization preparation using [meffil](https://github.com/perishky/meffil/tree/master)  |
+| `2.1-qc_and_normalization_preparation.R` | Basic quality control and preparation for functional normalization using [meffil](https://github.com/perishky/meffil/tree/master)  |
 | `2.2-normalization.R` | Functional normalization using [meffil](https://github.com/perishky/meffil/tree/master) | 
-| `2.4-outlier_handling.R` | Outlier handling through conservative removal or winsorization |
+| `2.4-outlier_handling.R` | Outlier handling using conservative removal or winsorization |
