@@ -1,8 +1,8 @@
 # Longitudinal DNAm Profiling Workflow
 
-This repositiory contains scripts for longitudinal DNAm profiling, as done in The Generation R Study cohort.  
+This repositiory contains scripts for longitudinal DNA methylation (DNAm) profiling, developed for and used in The Generation R Study.  
 
-![](images/DNAm_workflow.png?raw=true)
+![](images/DNAm_workflow_github.png?raw=true)
 
 ---
 
