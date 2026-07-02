@@ -1,6 +1,6 @@
 # GenR EPICv2 sample preparation
 
-This repository contains the scripts used for **sample selection** and **plate randomization** prior to EPICv2 DNA methylation profiling in the Generation R Study (funded by the HappyMums project). 
+This section contains the scripts used for **sample selection** and **plate randomization** prior to EPICv2 DNA methylation profiling in the Generation R Study (funded by the HappyMums project). 
 
 ---
 
