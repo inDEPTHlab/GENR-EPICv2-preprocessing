@@ -1,0 +1,306 @@
+---
+title: "HappyMums DNAm sample selection report"
+author: "Serena Defina"
+date: "`r Sys.Date()`"
+output: 
+  html_document:
+    code_folding: hide
+---
+
+### Aim and criteria
+
+The goal is to identify **3667** samples for DNA methylation extraction (EPICv2), across available Generation R timepoints.
+<br><br>
+
+#### Selection criteria
+
+Selected children had:
+
+- available DNA methylation data at birth (EPICv1 or 450K) 
+- at least 1 postnatal follow-up time point (at 6, 10, 14 or 18 years).
+- DNA concentration > 11.1 ng/ul
+<br><br>
+
+#### Bridge samples
+
+**80** (of the 3667 total) samples were researved for the "bridge" sub-sample. These are birth samples to redone with EPICv2 (and compared to existing EPICv1 / 450K data). 
+
+[Selection criteria]{.underline}: at least 2 samples per plate.
+<br><br>
+
+### Setup and functions
+
+```{r setup}
+
+library(foreign)
+
+# Point to the file location ("DNAm_selection.sav")
+# if (exists("fileloc") == FALSE) { fileloc <- file.choose() }
+folder <- getwd() # dirname(fileloc)
+
+# Read files 
+readit <- function(fname){
+  out <- foreign::read.spss(file.path(folder,paste0(fname,'.sav')), 
+                            to.data.frame=TRUE, 
+                            use.value.labels = TRUE)
+  # print(summary(out))
+  return(out)
+}
+
+# Quick summary helper
+quicktab <- function(m, v){ cat(m, '\n'); print(table(v, useNA = 'ifany')) }
+```
+
+### Data extraction and cleaning
+
+```{r load at17, warning=FALSE, echo=FALSE}
+# ~ OLD ~ 
+
+# For identifying children who attended the 18 years visit, I use the file `“20230516_InviteFocus\@17-Cohort_4Serena”` (created by Claudia).
+
+# Load
+# at17 <- readit('20230516_InviteFocus@17-Cohort_4Serena')
+
+# at17[-1] <- sapply(at17[-1], droplevels) # remove empty factor levels 
+
+# quicktab('Current data on attendance @ 18 years wave:\n',
+#            at17[,c('Invite.17','Groep.17')])
+```
+
+For determining which children have DNA methylation data at birth (450K or EPICv1), and DNA (i.e. EDTA) availability at each postnatal timepoint (6, 10, 14 and 18 years), I use the file `20230822_Serana_DNAplusWholeblood_Birthuntil17` (created by Claudia).
+
+I extract the mother ID from `CHILD-ALLGENERALDATA_24102022` (to identify siblings).
+
+```{r load edta, warning=FALSE}
+# Load data on DNA availability at each timepoint
+edta <- readit('20230822_Serana_DNAplusWholeblood_Birthuntil17')
+
+edta$DNAm_EPIC_birth <- as.factor(ifelse(grepl("^\\s*$", edta$Sample_ID_MethylEPICBirth_1), 'no','yes'))
+edta$DNAm_450K_birth <- as.factor(ifelse(grepl("^\\s*$", edta$Sample_ID_450kMethBirth_3), 'no','yes'))
+
+edta$genome_GenR3 <- as.factor(ifelse(is.na(edta$GenRv3all), 'no', 'yes'))
+edta$genome_GenR4 <- as.factor(ifelse(is.na(edta$GENR4), 'no', 'yes'))
+
+{
+  quicktab('DNA methylation data at birth:\n',
+         edta[,c('DNAm_450K_birth','DNAm_EPIC_birth')])
+  
+  quicktab('\n\nGenome-wide data available:\n',
+         edta[,c('genome_GenR3','genome_GenR4')])
+}
+edta$EDTA_birth <- ifelse(edta$DNACHILD0 == 'Yes', 1, NA)
+edta$EDTA_6y <- ifelse(edta$EDTABLCHILD5 == 'Yes', 1, NA)
+edta$EDTA_10y <- ifelse(edta$EDTABLCHILD9 == 'Yes', 1, NA)
+edta$EDTABLCHILD13[edta$EDTABLCHILD13 == 888] <- NA
+edta$EDTA_14y <- edta$EDTABLCHILD13
+edta$EDTA_18y <- edta$EDTABLCHILD17
+
+# Load general data (for siblings and twins)
+core <- readit('CHILD-ALLGENERALDATA_24102022')
+
+# Merge
+data <- merge(core[c('IDC', 'MOTHER')], 
+              edta[c('IDC', 'DNAm_EPIC_birth', 'DNAm_450K_birth',
+                     'genome_GenR3', 'genome_GenR4',
+                     'EDTA_birth', 'EDTA_6y', 'EDTA_10y', 'EDTA_14y', 'EDTA_18y')], 
+              by='IDC', all=TRUE)
+
+```
+
+To determine which children already had 450K data availale at 6 and/or 10 years I used files: `Selection_GENR_450kmeth_release3_5y` and `Selection_GENR_450kmeth_release3_9y_20190813` (downloaded from the Wiki on 02/09/2023).
+
+These were removed from the available (EDTA) samples at their respective ages.
+
+```{r postnatal DNAm, warning=FALSE}
+# Which samples already have 450K data at 6 and/or 10 years? 
+k450_5 <- readit('Selection_GENR_450kmeth_release3_5y')
+k450_9 <- readit('Selection_GENR_450kmeth_release3_9y_20190813')
+
+data$DNAm_450K_6y <- ifelse(data$IDC %in% k450_5$IDC, 'yes', 'no')
+data$DNAm_450K_10y <- ifelse(data$IDC %in% k450_9$IDC, 'yes', 'no')
+
+quicktab('450K data already available postnatally (@ 6 and 10 years):\n',
+         data[,c('DNAm_450K_6y', 'DNAm_450K_10y')])
+
+# remove them from the samples at their respective ages
+data$EDTA_6y[data$DNAm_450K_6y == 'yes'] <- 0
+data$EDTA_10y[data$DNAm_450K_10y == 'yes'] <- 0
+
+{
+  cat("EDTA data available (= 1):\n")
+  # quicktab('nBirth:', data$EDTA_birth)
+  quicktab('\n6 years:', data$EDTA_6y)
+  quicktab('\n10 years:', data$EDTA_10y)
+  quicktab('\n14 years:', data$EDTA_14y)
+  quicktab('\n18 years:', data$EDTA_18y)
+}
+
+data$EDTA_sum <- rowSums(data[,c('EDTA_6y', 'EDTA_10y', 'EDTA_14y', 'EDTA_18y')], na.rm=TRUE)
+
+quicktab('\nPostnatal EDTA, available timpoints:', 
+         data$EDTA_sum)
+
+```
+### Sample selection
+
+```{r sample selection}
+# Filter sample
+samp1 <- data[data$DNAm_EPIC_birth=='yes' | data$DNAm_450K_birth=='yes', ]
+
+# Print descriptives
+{
+  cat('Step1: DNAm at birth. N =', nrow(samp1))
+  quicktab('\n\nPostnatal EDTA, available timpoints:', 
+         samp1$EDTA_sum)
+}
+
+# Filter sample
+samp2 = samp1[samp1$EDTA_sum > 0, ]
+
+# Print descriptives
+{
+  cat('Step2: At least 1 follow-up time. N =', nrow(samp2))
+  quicktab('\n\nPostnatal EDTA, available timpoints:', 
+         samp2$EDTA_sum)
+  
+}
+
+```
+
+```{r select siblings}
+# Identify siblings by which mother IDs recur more than once
+all_siblings = samp2[which(duplicated(samp2['MOTHER'])| 
+                             duplicated(samp2['MOTHER'], fromLast = TRUE)),]
+
+dup_mothers = levels(as.factor(all_siblings$MOTHER))
+
+# Initialize list to fill with IDs of siblings to exclude
+worse_sibling = list()
+
+set.seed(3108)
+
+# Loop through the duplicated mother IDs and identify siblings
+for (m in dup_mothers) {
+  sibl_pair = samp2[samp2$MOTHER == m, ]
+  if (nrow(sibl_pair) > 2) warning("Does not handle mothers who have more than 2 siblings")
+  
+  if ( sibl_pair[1,'EDTA_sum'] > sibl_pair[2,'EDTA_sum'] ) {
+    worse_sibling = c(worse_sibling, sibl_pair[1, 'IDC'])
+  
+  # If both siblings have the same follow-up counts, pick the one with EPIC data
+  # at birth, or, if equal, randomly.
+  } else if ( sibl_pair[1,'EDTA_sum'] == sibl_pair[2,'EDTA_sum'] ) {
+    
+    if (length(which(!sibl_pair$DNAm_EPIC_birth=='yes')) == 1) {
+      worse_sibling = c(worse_sibling,
+                        sibl_pair[which(!sibl_pair$DNAm_EPIC_birth == 'yes'), 'IDC'])
+      
+    } else { worse_sibling = c(worse_sibling, sibl_pair[sample(1:2, 1), 'IDC']) }
+    
+  } else { worse_sibling = c(worse_sibling, sibl_pair[2,'IDC']) }
+     
+}
+
+samp3 = samp2[!samp2$IDC %in% worse_sibling, ]
+
+# Print some descriptives
+{
+  cat('Step3: Exclude siblings. N =', nrow(samp3))
+  quicktab('\n\nPostnatal EDTA, available timpoints:',
+         samp3$EDTA_sum)
+  cat('\nNumber of samples = ', sum(samp3$EDTA_sum))
+  quicktab('\n\nBirth DNAm:', samp3[c('DNAm_EPIC_birth','DNAm_450K_birth')])
+  
+  cat("\n\nEDTA data available (= 1):\n")
+  quicktab('\n6 years:', samp3$EDTA_6y)
+  quicktab('\n10 years:', samp3$EDTA_10y)
+  quicktab('\n14 years:', samp3$EDTA_14y)
+  quicktab('\n18 years:', samp3$EDTA_18y)
+
+}
+
+# haven::write_sav(samp3, "methyl_sample_happymums_050224.sav")
+```
+
+The goal is to identify 3696 samples (3776 - 80 bridges).
+
+We provide `r sum(samp3$EDTA_sum)` (`r sum(samp3$EDTA_sum) - 3696` extra / buffer samples in case of failed DNA extraction).
+
+### After DNA isolation
+
+Of the selected samples, **3474** went through DNA isolation and the sex checks, 
+giving good results. We need to identify **222** *extra* samples (3776 - 80 - 3474) 
+to supplement the current selection.
+
+These were selected among samples that had already been isolated by the Immunology department (at age 6 and 10 years) and meet our selection criteria (i.e., DNAm at birth). 
+
+Using the file: `20240614_Serena_updateDNA` (by Claudia)
+
+```{r after DNA extraction, warning=FALSE}
+# Load data 
+extra_samps <- readit('20240614_Serena_updateDNA')
+
+# Indentify the "immunology" samples
+immuno_label <- "DNA => 11.1 ng/ul isolated earlier"
+extra_samps$immuno_6y <- as.factor(ifelse(extra_samps$DNA5_2024_updated == immuno_label, 1, 0))
+extra_samps$immuno_10y <- as.factor(ifelse(extra_samps$DNA9_2024_updated == immuno_label, 1, 0))
+
+# Indentify the "successfully extracted" samples
+dna_success_label <- "DNA => 11.1 ng/ul"
+extra_samps$DNA_6y <- ifelse(extra_samps$DNA5_2024_updated == dna_success_label, 1, 0)
+extra_samps$DNA_10y <- ifelse(extra_samps$DNA9_2024_updated == dna_success_label, 1, 0)
+extra_samps$DNA_14y <- ifelse(extra_samps$DNA13_2024_updated == dna_success_label, 1, 0)
+extra_samps$DNA_18y <- ifelse(extra_samps$DNA17_2024_updated == dna_success_label, 1, 0)
+
+# Reload info about DNAm at birth (not included in Claudia's file)
+edta <- readit('20230822_Serana_DNAplusWholeblood_Birthuntil17')
+
+edta$DNAm_EPIC_birth <- as.factor(ifelse(grepl("^\\s*$", edta$Sample_ID_MethylEPICBirth_1), 'no','yes'))
+edta$DNAm_450K_birth <- as.factor(ifelse(grepl("^\\s*$", edta$Sample_ID_450kMethBirth_3), 'no','yes'))
+edta$DNAm_birth <- as.factor(ifelse(edta$DNAm_EPIC_birth=='yes','EPIC',
+                                    ifelse(edta$DNAm_450K_birth=='yes','450K', 'no')))
+
+# Merge
+data <- merge(extra_samps[c('IDC','DNA_6y','DNA_10y','DNA_14y','DNA_18y',
+                            'immuno_6y','immuno_10y')], 
+              edta[c('IDC','DNAm_birth')], 
+              by='IDC', all=TRUE)
+
+# Subset for DNAm at birth
+data <- data[data$DNAm_birth != 'no', ]
+
+# Count successful samples
+data$DNA_sum <- rowSums(data[,c('DNA_6y','DNA_10y','DNA_14y','DNA_18y')], na.rm=TRUE)
+
+# Print some descriptives
+{
+  cat("DNA isolation successful (= 1):\n")
+  quicktab('\n6 years:', data$DNA_6y)
+  quicktab('\n10 years:', data$DNA_10y)
+  quicktab('\n14 years:', data$DNA_14y)
+  quicktab('\n18 years:', data$DNA_18y)
+  quicktab('\n\nAvailable timpoints:',
+         data$DNA_sum)
+  cat('\nNumber of samples = ', sum(data$DNA_sum))
+}
+
+
+```
+
+
+```{r}
+library(dplyr)
+
+data <- data %>%
+  mutate(pick_immuno = as.factor(case_when(
+    immuno_6y == 1 &  immuno_10y == 1 ~ "yes (both)",
+    immuno_6y == 1 ~ "yes (6 years)",
+    immuno_10y == 1 ~ "yes (10 years)",
+    TRUE ~ NA)))
+
+quicktab('\nImmuno extras:', data[c('DNA_sum','pick_immuno')])
+                                  
+# haven::write_sav(data, "happymums_immunology_extras_180624.sav")
+```
+
+Provided **`r sum(!is.na(data$pick_immuno))`** extra samples.
