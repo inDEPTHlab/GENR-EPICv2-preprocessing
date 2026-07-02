@@ -4,13 +4,13 @@ This section contains the scripts used for **sample selection** and **plate rand
 
 ---
 
-## Repository structure
+## Section structure
 
 | File | Description |
 |------|-------------|
-| `1.HappyMums_DNAm_sample_selection_report.Rmd` | Reproducible R Markdown report: eligibility filtering, sibling removal, and supplementary sample identification |
-| `2.bridges_and_extras_selection.R` | Selection of bridge samples (for array cross-validation at birth) and supplementary *"immuno"* samples |
-| `3.randomization.R` | Multivariate randomization of the plate layout delivered to the lab |
+| `1.1-genr_epicv2_sample_selection_report.Rmd` | Reproducible R Markdown report: eligibility filtering, sibling removal, and supplementary sample identification |
+| `1.2-bridges_and_extras_selection.R` | Selection of bridge samples (for array cross-validation at birth) and supplementary *"immuno"* samples |
+| `1.3-randomization.R` | Multivariate randomization of the plate layout delivered to the lab |
 | `docs/index.html` | Rendered HTML output of the sample selection report |
 
 ---
